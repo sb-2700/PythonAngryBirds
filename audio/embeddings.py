@@ -11,6 +11,7 @@ def _get_model():
         _model = AudioTagging(checkpoint_path=None, device=DEVICE)  # downloads weights on first use
     return _model
 
+''' Audio Preprocessing'''
 def load_mono_16k(path, target_sr=16000, trim_db=30):
     y, sr = sf.read(path, dtype="float32", always_2d=False)
     if y.ndim > 1: y = y.mean(axis=1)

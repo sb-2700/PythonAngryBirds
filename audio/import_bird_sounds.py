@@ -33,7 +33,7 @@ def extract_spectrogram(wav_path, filename):
     plt.colorbar(label='Intensity [dB]')
     plt.tight_layout()
     plt.show()
-    plt.savefig(f"Spectrogram_{filename}.png")
+    #plt.savefig(f"Spectrogram_{filename}.png")
     print("Printed")
 
 

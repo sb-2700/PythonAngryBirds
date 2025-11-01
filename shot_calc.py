@@ -1,17 +1,19 @@
 import numpy as np
 import os
 import librosa
+from matplotlib import pyplot as plt
 
 def get_time_averaged_db(audio_file_path, ref_level=1.0):
     """
     Calculate the time-averaged dB level from an audio file.
+    Preserves relative loudness between whispers and shouts.
     
     Parameters:
         audio_file_path (str): Path to the audio file
         ref_level (float): Reference level for dB calculation (default: 1.0)
     
     Returns:
-        float: Time-averaged dB level
+        float: Time-averaged dB level, higher values indicate louder sounds
     """
     # Load the audio file
     y, sr = librosa.load(audio_file_path)
@@ -19,13 +21,42 @@ def get_time_averaged_db(audio_file_path, ref_level=1.0):
     # Convert amplitude to power
     power = np.abs(y)**2
     
-    # Calculate dB values (10 * log10 for power)
-    db_values = 10 * np.log10(power + 1e-10)
+    # Calculate dB values (20 * log10 for amplitude)
+    # Add large offset to make values positive for game mechanics
+    db_values = 20 * np.log10(np.sqrt(power) + 1e-12) + 60
+    
+    # Remove any remaining negative values
+    db_values = np.maximum(db_values, 0)
     
     # Calculate time-averaged dB
     avg_db = np.mean(db_values)
+
+    '''plt.figure(figsize=(10, 4))
+    plt.plot(db_values, color='blue')
+    plt.title(f'dB Values Over Time (avg: {avg_db:.2f} dB)')
+    plt.ylabel('dB')
+    plt.xlabel('Time (samples)')
+    plt.show()'''
     
-    return avg_db
+    return int(avg_db)
+
+def get_duration(audio_path):
+    """
+    Get the duration of an audio file in seconds.
+    
+    Parameters:
+        audio_path (str): Path to the audio file
+    
+    Returns:
+        float: Duration of the audio in seconds
+    """
+    # Load the audio file
+    y, sr = librosa.load(audio_path)
+    
+    # Calculate duration
+    duration = librosa.get_duration(y=y, sr=sr)
+    
+    return duration
 
 def get_pitch(audio_path):
     """
@@ -50,18 +81,21 @@ def get_angle():
     Calculate the angle based on pitch.
     Returns angle in radians.
     """
-    sample_sound_2_available = False  # Debug flag
-    if not sample_sound_2_available:
+    power_sound_2_available = True#False#True #False  # Debug flag
+    if not power_sound_2_available:
         print("Debug mode: Standard angle returned")
         return ( default_angle / 360) * 2 * np.pi  # 45 degrees in radians
 
     try:
-        audio_path = "audio/power_sounds/sample_sound_2.opus"
+        print("Calculating angle from pitch...")
+        audio_path = "audio/power_sounds/power_sound_2.wav"
         if os.path.exists(audio_path):
+            print("Path found")
             pitch = get_pitch(audio_path)
             # Map pitch to angle (from -45° to 90°)
             # Lower frequencies will give negative angles (upward shots)
-            angle_degrees = np.clip(np.interp(pitch, [100, 1000], [90, 180]), 90, 180)
+            angle_degrees = np.clip(np.interp(pitch, [100, 1000], [180, 90]), 90, 180)
+            print(f"Pitch detected: {pitch} Hz, Angle: {angle_degrees} degrees")
             return (angle_degrees / 360) * 2 * np.pi
         else:
             print("Audio file not found, using default angle")
@@ -76,18 +110,19 @@ def get_distance():
     Calculate the pull distance based on time-averaged dB.
     Returns distance in pixels scaled quadratically (0-90).
     """
-    sample_sound_2_available = False  # Debug flag
-    if not sample_sound_2_available:
+    power_sound_2_available = True #True #False  # Debug flag
+    if not power_sound_2_available:
         print("Debug mode: Standard power returned")
         return 45
 
     try:
-        audio_path = "audio/power_sounds/sample_sound_2.opus"
+        audio_path = "audio/power_sounds/power_sound_2.wav"
         if os.path.exists(audio_path):
-            avg_dB = get_time_averaged_db(audio_path)
+            T_period = get_duration(audio_path)
             # Map dB to 0-1 range first
-            scaling_factor = (dB_range[1] - dB_range[0]) / 90 # *90 for full range of sling shot
-            distance = avg_dB * scaling_factor 
+            scaled_factor = T_period /3 # *90 for full range of sling shot
+            distance = 90 * scaled_factor 
+            print(f"Time of recording: {T_period}, Power of shot 1-3s is time range: {distance}")
             return distance
         else:
             print("Audio file not found, using default distance")

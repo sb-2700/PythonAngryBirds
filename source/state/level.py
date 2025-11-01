@@ -180,7 +180,8 @@ class Level(tool.State):
             if self.auto_shot_state != 'activated':
                 self.handle_sling(mouse_pos, mouse_pressed)
         elif self.state == c.ATTACK:
-            if self.active_bird.state == c.DEAD:
+            # guard against active_bird being None (it may have been removed)
+            if (self.active_bird is None) or (hasattr(self.active_bird, 'state') and self.active_bird.state == c.DEAD):
                 self.active_bird = None
                 self.select_bird()
                 self.swith_bird_path()
@@ -203,13 +204,20 @@ class Level(tool.State):
     def handle_sling(self, mouse_pos, mouse_pressed):
         if not mouse_pressed:
             if self.sling_click:
+                # If there is no active bird (it might have been removed), cancel the sling
+                if self.active_bird is None:
+                    self.sling_click = False
+                    return
                 self.sling_click = False
                 xo = 154
                 yo = 444
                 self.physics.add_bird(self.active_bird, self.mouse_distance,
                                       self.sling_angle, xo, yo)
                 self.active_bird.set_attack()
-                self.birds.remove(self.active_bird)
+                try:
+                    self.birds.remove(self.active_bird)
+                except ValueError:
+                    pass
                 self.physics.enable_check_collide()
                 self.state = c.ATTACK
         elif not self.sling_click:
@@ -279,7 +287,8 @@ class Level(tool.State):
                 self.mouse_distance = -mouse_distance
         else:
             pg.draw.line(surface, (0, 0, 0), (sling_x, sling_y-8), (sling2_x, sling2_y-7), 5)
-            if self.active_bird.state == c.IDLE:
+            # guard: active_bird may be None if removed
+            if (self.active_bird is not None) and hasattr(self.active_bird, 'state') and self.active_bird.state == c.IDLE:
                 self.active_bird.draw(surface)
 
     def check_button_click(self, mouse_pos, mouse_pressed):

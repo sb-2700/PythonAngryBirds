@@ -1,16 +1,16 @@
 {
     "birds": [
         {
-            "type": "red_bird"
+            "type": null
         },
         {
-            "type": "red_bird"
+            "type": null
         },
         {
-            "type": "red_bird"
+            "type": null
         },
         {
-            "type": "red_bird"
+            "type": null
         }
     ],
     "pigs": [

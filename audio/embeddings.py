@@ -25,8 +25,12 @@ def wav_to_embedding(path):
     """Return L2-normalized 2048-D embedding for a wav file."""
     y = load_mono_16k(path)
     model = _get_model()
+
+    # Add batch dimension: model expects shape [batch_size, samples]
+    y_batch = y[None, :]  # Convert from [samples] to [1, samples]
+
     with torch.no_grad():
-        _, emb = model.inference(y)   # emb shape: [T, 2048]
+        _, emb = model.inference(y_batch)   # emb shape: [T, 2048]
     v = emb.mean(axis=0)              # temporal average to fixed-size
     v = v / (np.linalg.norm(v) + 1e-10)
     return v.astype(np.float32)

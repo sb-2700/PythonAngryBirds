@@ -8,11 +8,12 @@ audio_dir = os.path.join(project_root, 'audio')
 if audio_dir not in sys.path:
 	sys.path.insert(0, audio_dir)
 
-import audio_setup 
-from file_input import opus_to_wav
+#import audio_setup 
+#from file_input import opus_to_wav
 
 # Original plan / notes (keep all comments):
 #Recieve twilio audio file
+#Write file to folder from local storage on computer
 #
 #pass .opus file to audio_main.py to convert to .wav
 #call proto_infer.py to get bird type

@@ -3,14 +3,55 @@ from pydub import AudioSegment
 import librosa
 import numpy as np
 import os
+'''
+# Set FFmpeg paths directly
+ffmpeg_path = "C:\\ffmpeg\\bin\\ffmpeg.exe"
+ffprobe_path = "C:\\ffmpeg\\bin\\ffprobe.exe"
+
+# Print debug information
+print(f"Checking FFmpeg at {ffmpeg_path}")
+print(f"Checking FFprobe at {ffprobe_path}")
+
+if os.path.exists(ffmpeg_path) and os.path.exists(ffprobe_path):
+    print("Found FFmpeg and FFprobe!")
+    AudioSegment.converter = ffmpeg_path
+    AudioSegment.ffmpeg = ffmpeg_path
+    AudioSegment.ffprobe = ffprobe_path
+else:
+    print("ERROR: FFmpeg/FFprobe not found!")
+    if not os.path.exists(ffmpeg_path):
+        print(f"Missing: {ffmpeg_path}")
+    if not os.path.exists(ffprobe_path):
+        print(f"Missing: {ffprobe_path}")
+    print("Please ensure FFmpeg is installed correctly")'''
 
 def opus_to_wav(file, opus_path):
+    '''print("\n=== Debug Information ===")
+    print(f"Input file: {file}")
+    print(f"Full path: {opus_path}")
+    print(f"FFmpeg converter path: {AudioSegment.converter}")
+    print(f"FFmpeg path: {AudioSegment.ffmpeg}")
+    print(f"FFprobe path: {AudioSegment.ffprobe}")
+    print(f"File exists? {os.path.exists(opus_path)}")'''
     
-    # Load the .opus file
-    audio = AudioSegment.from_file(opus_path, format="ogg")  # try "ogg" instead of "opus"
-    output_dir = opus_path.split(".")[0] + ".wav"
-    # Export as .wav
-    audio.export(output_dir, format="wav")
+    try:
+        print("Attempting to load audio file...")
+        # Load the .opus file
+        audio = AudioSegment.from_file(opus_path, format="ogg")  # try "ogg" instead of "opus"
+        print("Successfully loaded audio file!")
+        
+        output_dir = opus_path.split(".")[0] + ".wav"
+        print(f"Will save to: {output_dir}")
+        
+        # Export as .wav
+        print("Attempting to export as WAV...")
+        audio.export(output_dir, format="wav")
+        print("Successfully exported to WAV!")
+        return output_dir
+    except Exception as e:
+        print(f"ERROR: {str(e)}")
+        print(f"Error type: {type(e)}")
+        raise
 
 
     '''if file.endswith(".opus"):

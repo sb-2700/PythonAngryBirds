@@ -24,7 +24,7 @@ def extract_spectrogram(wav_path, filename):
     # Convert to log scale (dB)
     Sxx_log = 10 * np.log10(Sxx + 1e-10)  # avoid log(0)
 
-    print("try plotting")
+    '''#print("try plotting")
     plt.figure(figsize=(10, 6))
     plt.pcolormesh(t, f, Sxx_log, shading='gouraud')
     plt.ylabel('Frequency [Hz]')
@@ -35,7 +35,7 @@ def extract_spectrogram(wav_path, filename):
     plt.show()
     #plt.savefig(f"Spectrogram_{filename}.png")
     print("Printed")
-
+'''
 
     return t, f, Sxx_log
 

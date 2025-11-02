@@ -1,15 +1,14 @@
 # proto_train_mel.py
 import os, json, numpy as np
 import librosa
-from embeddings import load_mono_16k_strict
+from embeddings import load_mono_16k
 
-# --- Reuse your filename->class mapping (fix labels if needed!)
+# --- Reuse your filename->class mapping
 FILE_TO_CLASS = {
     "Red_bird_fly.wav": "red",
     "Blue_bird_fly.wav": "blue",
     "Chuck_yellow_bird_fly.wav": "yellow",
     "Matilda_white_bird_fly.wav": "white",
-    "Bubbles_orange_bird.wav": "black",  # ensure this is correct for black bird
 }
 
 REF_DIR = "Bird_audios_wav"
@@ -44,7 +43,7 @@ def main():
     for cls, paths in class_files.items():
         mels = []
         for p in paths:
-            y = load_mono_16k_strict(p)           # same strict preprocessing
+            y = load_mono_16k(p)           # same preprocessing
             M = wav_to_logmel(y)                   # [mels, T]
             mels.append(M)
 

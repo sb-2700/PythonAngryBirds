@@ -1,20 +1,7 @@
-# PythonAngryBirds
-a simple implementation of angrybirds using pygame and pymunk
-* support three birds：red bird, blue bird, yellow bird, black bird and white bird
-* suport three blocks: glass, wood and stone
-* use json file to store level data (e.g. position of block and pig)
-* TODO: support different pigs
+# WhatsApp controlled Angry Birds
 
-# Requirement
-* Python 3.7
-* Python-Pygame 1.9
-* Pymunk 5.5.0
+We used a pygame implementation of angrybirds by marblexu and modified it to use bird noises sent via WhatsApp voice messages to select birds and fire them. This was for the 'unintended behaviour' theme of CamHacks 25.
 
-# How To Start Game
-$ python main.py
+We used Twilio to send the audio files from WhatsApp to our server. To analyse and classify the 'bird noises' we used a pretrained 14 layer CNN with a linear head at the end that we trained ourselves on synthetic data, achieveing >90% accuracy. This is pretty impressive given that the audios were human imitations of angry bird noises which made for a challenging classification task on minimal data and compute. We used spectrograms to calibrate the bird noises so that frequency determines shot angle and voluem determines shot power.
 
-# How to Play
-* use mouse to drag the bird, modify the direction, then release the mouse to shoot the bird
-
-# Demo
-![demo1](https://raw.githubusercontent.com/marblexu/PythonAngryBirds/master/resources/demo/demo1.png)
+Thanks to Aaron MacWhirter, Matyas Vecsei and William Goacher for their contributions to this project

@@ -1,0 +1,28 @@
+# Core scientific stack
+numpy
+scipy
+pandas
+
+# Audio I/O and processing
+librosa
+soundfile
+pydub
+torchaudio
+
+# Deep learning (PANNs CNN14 depends on PyTorch)
+torch
+panns-inference
+
+# Plotting (for spectrograms)
+matplotlib
+
+# Web framework (optional, used in api.py for Twilio)
+fastapi
+uvicorn
+python-multipart
+requests
+twilio
+
+# Optional utilities
+joblib
+scikit-learn

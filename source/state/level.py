@@ -8,6 +8,10 @@ from .. import tool
 from .. import constants as c
 from ..component import button, physics, bird, pig, block
 
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+import shot_calc
+
 bold_font = pg.font.SysFont("arial", 30, bold=True)
 
 def vector(p0, p1):
@@ -37,6 +41,11 @@ class Level(tool.State):
         self.persist = self.game_info
         self.game_info[c.CURRENT_TIME] = current_time
         self.reset()
+        # Auto-shot timings (milliseconds). Activate at +2000ms, release at +3000ms
+        self.auto_shot_activate_at = current_time + 2000
+        self.auto_shot_release_at = current_time + 3000
+        # states: 'pending', 'activated', 'done'
+        self.auto_shot_state = 'pending'
 
     def reset(self):
         self.score = self.game_info[c.SCORE]
@@ -130,10 +139,49 @@ class Level(tool.State):
         self.draw(surface)
     
     def handle_states(self, mouse_pos, mouse_pressed):
+        # Auto-shot controller: activate and release without player input
         if self.state == c.IDLE:
-            self.handle_sling(mouse_pos, mouse_pressed)
+            # Check activation
+            if hasattr(self, 'auto_shot_state') and self.auto_shot_state == 'pending':
+                if self.current_time >= getattr(self, 'auto_shot_activate_at', 0):
+                    # Activate sling and position bird using shot_calc
+                    if self.active_bird is not None:
+                        self.sling_click = True
+                        angle = shot_calc.get_angle()
+                        distance = shot_calc.get_distance()
+                        sling_x, sling_y = 135, 450
+                        mouse_x = sling_x + distance * math.cos(angle)
+                        mouse_y = sling_y + distance * math.sin(angle)
+                        # store values used on release
+                        self.mouse_distance = distance
+                        self.sling_angle = angle
+                        # visually position bird
+                        self.active_bird.update_position(mouse_x - 20, mouse_y - 20)
+                        self.auto_shot_state = 'activated'
+            # Check release
+            if hasattr(self, 'auto_shot_state') and self.auto_shot_state == 'activated':
+                if self.current_time >= getattr(self, 'auto_shot_release_at', 0):
+                    # perform release (same logic as real mouse release)
+                    if self.sling_click and self.active_bird is not None:
+                        self.sling_click = False
+                        xo = 154
+                        yo = 444
+                        self.physics.add_bird(self.active_bird, self.mouse_distance,
+                                              self.sling_angle, xo, yo)
+                        self.active_bird.set_attack()
+                        try:
+                            self.birds.remove(self.active_bird)
+                        except ValueError:
+                            pass
+                        self.physics.enable_check_collide()
+                        self.state = c.ATTACK
+                        self.auto_shot_state = 'done'
+            # If auto-shot didn't trigger, fall back to normal input handling
+            if self.auto_shot_state != 'activated':
+                self.handle_sling(mouse_pos, mouse_pressed)
         elif self.state == c.ATTACK:
-            if self.active_bird.state == c.DEAD:
+            # guard against active_bird being None (it may have been removed)
+            if (self.active_bird is None) or (hasattr(self.active_bird, 'state') and self.active_bird.state == c.DEAD):
                 self.active_bird = None
                 self.select_bird()
                 self.swith_bird_path()
@@ -156,13 +204,20 @@ class Level(tool.State):
     def handle_sling(self, mouse_pos, mouse_pressed):
         if not mouse_pressed:
             if self.sling_click:
+                # If there is no active bird (it might have been removed), cancel the sling
+                if self.active_bird is None:
+                    self.sling_click = False
+                    return
                 self.sling_click = False
                 xo = 154
                 yo = 444
                 self.physics.add_bird(self.active_bird, self.mouse_distance,
                                       self.sling_angle, xo, yo)
                 self.active_bird.set_attack()
-                self.birds.remove(self.active_bird)
+                try:
+                    self.birds.remove(self.active_bird)
+                except ValueError:
+                    pass
                 self.physics.enable_check_collide()
                 self.state = c.ATTACK
         elif not self.sling_click:
@@ -179,10 +234,24 @@ class Level(tool.State):
         bigger_rope = 102
 
         if self.sling_click:
-            mouse_x, mouse_y = pg.mouse.get_pos()
+            ############### OUR VERSION ###############
+            # Use predetermined values from shot_calc.py
+            angle = shot_calc.get_angle()  # You'll need to create this function
+            distance = shot_calc.get_distance()  # You'll need to create this function
+            
+            # Calculate position based on angle and distance
+            mouse_x = sling_x + distance * math.cos(angle)
+            mouse_y = sling_y + distance * math.sin(angle)
+            
+            v = vector((sling_x, sling_y), (mouse_x, mouse_y))
+            uv_x, uv_y = unit_vector(v)
+            mouse_distance = distance
+            ###########################################
+            '''mouse_x, mouse_y = pg.mouse.get_pos()
             v = vector((sling_x, sling_y), (mouse_x, mouse_y))
             uv_x, uv_y = unit_vector(v)
             mouse_distance = tool.distance(sling_x, sling_y, mouse_x, mouse_y)
+            '''
             pu = (uv_x * rope_length + sling_x, uv_y * rope_length + sling_y)
             
             if mouse_distance > rope_length:
@@ -218,7 +287,8 @@ class Level(tool.State):
                 self.mouse_distance = -mouse_distance
         else:
             pg.draw.line(surface, (0, 0, 0), (sling_x, sling_y-8), (sling2_x, sling2_y-7), 5)
-            if self.active_bird.state == c.IDLE:
+            # guard: active_bird may be None if removed
+            if (self.active_bird is not None) and hasattr(self.active_bird, 'state') and self.active_bird.state == c.IDLE:
                 self.active_bird.draw(surface)
 
     def check_button_click(self, mouse_pos, mouse_pressed):

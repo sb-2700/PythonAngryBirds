@@ -56,7 +56,7 @@ class Physics():
             line.elasticity = 0.95
             line.friction = 1
             line.collision_type = COLLISION_LINE
-        self.space.add(static_lines)
+        self.space.add(static_body, *static_lines)
         self.static_lines = static_lines
 
     def setup_collision_handler(self):
@@ -101,33 +101,40 @@ class Physics():
                 egg_shape = arbiter.shapes[0]
                 my_phy.handle_egg_collide(egg_shape)
 
-        self.space.add_collision_handler(
-            COLLISION_BIRD, COLLISION_LINE).post_solve = post_solve_bird_line
-
-        self.space.add_collision_handler(
-            COLLISION_PIG, COLLISION_BIRD).post_solve = post_solve_pig_bird
-
-        self.space.add_collision_handler(
-            COLLISION_PIG, COLLISION_LINE).post_solve = post_solve_pig_line
-
-        self.space.add_collision_handler(
-            COLLISION_PIG, COLLISION_BLOCK).post_solve = post_solve_pig_block
-
-        self.space.add_collision_handler(
-            COLLISION_BLOCK, COLLISION_BIRD).post_solve = post_solve_block_bird
-
-        self.space.add_collision_handler(
-            COLLISION_BLOCK, COLLISION_EXPLODE).post_solve = post_solve_block_explode
-
-        self.space.add_collision_handler(
-            COLLISION_PIG, COLLISION_EXPLODE).post_solve = post_solve_pig_explode
-
-        self.space.add_collision_handler(
-            COLLISION_EGG, COLLISION_LINE).post_solve = post_solve_egg
-        self.space.add_collision_handler(
-            COLLISION_EGG, COLLISION_BLOCK).post_solve = post_solve_egg
-        self.space.add_collision_handler(
-            COLLISION_EGG, COLLISION_PIG).post_solve = post_solve_egg
+        # Register collision handlers using the new pymunk 7.x API
+        def collision_handler(arbiter, space, data):
+            shape_a, shape_b = arbiter.shapes
+            collision_type_a = shape_a.collision_type
+            collision_type_b = shape_b.collision_type
+            
+            # Sort to ensure consistent order
+            if collision_type_a > collision_type_b:
+                collision_type_a, collision_type_b = collision_type_b, collision_type_a
+                shape_a, shape_b = shape_b, shape_a
+            
+            # Handle different collision types
+            if (collision_type_a, collision_type_b) == (COLLISION_BIRD, COLLISION_LINE):
+                post_solve_bird_line(arbiter, space, data)
+            elif (collision_type_a, collision_type_b) == (COLLISION_BIRD, COLLISION_PIG):
+                post_solve_pig_bird(arbiter, space, data)
+            elif (collision_type_a, collision_type_b) == (COLLISION_LINE, COLLISION_PIG):
+                post_solve_pig_line(arbiter, space, data)
+            elif (collision_type_a, collision_type_b) == (COLLISION_BLOCK, COLLISION_PIG):
+                post_solve_pig_block(arbiter, space, data)
+            elif (collision_type_a, collision_type_b) == (COLLISION_BIRD, COLLISION_BLOCK):
+                post_solve_block_bird(arbiter, space, data)
+            elif (collision_type_a, collision_type_b) == (COLLISION_BLOCK, COLLISION_EXPLODE):
+                post_solve_block_explode(arbiter, space, data)
+            elif (collision_type_a, collision_type_b) == (COLLISION_EXPLODE, COLLISION_PIG):
+                post_solve_pig_explode(arbiter, space, data)
+            elif (collision_type_a, collision_type_b) == (COLLISION_EGG, COLLISION_LINE) or \
+                 (collision_type_a, collision_type_b) == (COLLISION_BLOCK, COLLISION_EGG) or \
+                 (collision_type_a, collision_type_b) == (COLLISION_EGG, COLLISION_PIG):
+                post_solve_egg(arbiter, space, data)
+                
+            return True
+        
+        self.space.on_collision = collision_handler
 
     def enable_check_collide(self):
         self.check_collide = True
@@ -269,10 +276,10 @@ class Physics():
                 blocks_to_remove.append(block)
             poly = block.phy.shape
             p = poly.body.position
-            p = Vec2d(to_pygame(p))
+            p = Vec2d(*to_pygame(p))
             angle_degree = math.degrees(poly.body.angle) + 180
             rotated_image = pg.transform.rotate(block.orig_image, angle_degree)
-            offset = Vec2d(rotated_image.get_size()) / 2.
+            offset = Vec2d(*rotated_image.get_size()) / 2.
             p = p - offset
             block.update_position(p.x, p.y, rotated_image)
 
@@ -383,7 +390,7 @@ class PhyBird():
         body.apply_impulse_at_local_point(impulse.rotated(angle))
         
         shape = pm.Circle(body, radius, (0, 0))
-        shape.elasticity = 0.95
+        shape.elasticity = 0.7
         shape.friction = 1
         shape.collision_type = COLLISION_BIRD
         space.add(body, shape)
@@ -424,7 +431,7 @@ class PhyPolygon():
     def __init__(self, pos, length, height, space, mass=5.0):
         moment = 1000
         body = pm.Body(mass, moment)
-        body.position = Vec2d(pos)
+        body.position = Vec2d(*pos)
         shape = pm.Poly.create_box(body, (length, height))
         shape.friction = 1
         shape.collision_type = COLLISION_BLOCK
@@ -436,7 +443,7 @@ class PhyCircle():
     def __init__(self, pos, radius, space, mass=5.0):
         moment = 1000
         body = pm.Body(mass, moment)
-        body.position = Vec2d(pos)
+        body.position = Vec2d(*pos)
         shape = pm.Circle(body, radius, (0, 0))
         shape.friction = 1
         shape.collision_type = COLLISION_BLOCK
@@ -450,7 +457,7 @@ class PhyExplode():
         radius = 3
         moment = 1000
         body = pm.Body(mass, moment)
-        body.position = Vec2d(pos)
+        body.position = Vec2d(*pos)
 
         power = mass * 2000
         impulse = power * Vec2d(0, 1)
@@ -478,7 +485,7 @@ class PhyEgg():
     def __init__(self, pos, length, height, space, mass=5.0):
         moment = 1000
         body = pm.Body(mass, moment)
-        body.position = Vec2d(pos)
+        body.position = Vec2d(*pos)
 
         power = 5000
         impulse = power * Vec2d(0, -1)

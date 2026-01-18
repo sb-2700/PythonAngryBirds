@@ -9,16 +9,31 @@ from embeddings import wav_to_embedding
 
 DATASET_ROOT = "dataset"  # audio/dataset/...
 
-AUDIO_EXTS = {".wav", ".mp3", ".ogg", ".opus", ".flac", ".m4a", ".aac"}
+AUDIO_EXTS = {".wav"}
 
 def crawl_dataset(root):
     root = Path(root)
     classes = sorted([p.name for p in root.iterdir() if p.is_dir()])
+    
+    # Only process red, blue, yellow folders - WHITE DISABLED
+    target_classes = ["red", "blue", "yellow"]  # Removed "white"
+    classes = [cls for cls in classes if cls in target_classes]
+    
     files, labels = [], []
     for ci, cls in enumerate(classes):
+        if cls not in target_classes:
+            print(f"Skipping {cls} folder (disabled)")
+            continue
+        print(f"Processing {cls} folder...")
+        
+        class_files = []
         for f in (root/cls).iterdir():
             if f.is_file() and f.suffix.lower() in AUDIO_EXTS:
-                files.append(str(f)); labels.append(ci)
+                class_files.append(str(f))
+                labels.append(ci)
+        
+        print(f"  Found {len(class_files)} audio files")
+        files.extend(class_files)
     return classes, files, labels
 
 def main():

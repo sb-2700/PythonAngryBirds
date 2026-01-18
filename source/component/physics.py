@@ -390,7 +390,7 @@ class PhyBird():
         body.apply_impulse_at_local_point(impulse.rotated(angle))
         
         shape = pm.Circle(body, radius, (0, 0))
-        shape.elasticity = 0.95
+        shape.elasticity = 0.7
         shape.friction = 1
         shape.collision_type = COLLISION_BIRD
         space.add(body, shape)

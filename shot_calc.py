@@ -1,3 +1,4 @@
+#shot_calc
 import numpy as np
 import os
 import librosa
@@ -58,23 +59,41 @@ def get_duration(audio_path):
     
     return duration
 
+
 def get_pitch(audio_path):
     """
     Get the average pitch of an audio file.
     Returns frequency in Hz.
     """
     y, sr = librosa.load(audio_path)
-    # Use librosa's pitch detection
     pitches, magnitudes = librosa.piptrack(y=y, sr=sr)
-    # Get the highest magnitude pitch at each time
+    
     pitch_vals = []
     for t in range(pitches.shape[1]):
         index = magnitudes[:, t].argmax()
-        pitch_vals.append(pitches[index, t])
-    # Return the average of non-zero pitches
+        if magnitudes[index, t] > 0:  # optional threshold
+            pitch_vals.append(pitches[index, t])
+    
     valid_pitches = [p for p in pitch_vals if p > 0]
     return np.mean(valid_pitches) if valid_pitches else 0
 
+'''def get_pitch(audio_path):
+    """
+    Get the average pitch of an audio file.
+    Returns frequency in Hz.
+    """
+    y, sr = librosa.load(audio_path)
+    pitches, magnitudes = librosa.piptrack(y=y, sr=sr)
+
+    pitch_vals = []
+    for t in range(pitches.shape[1]):
+        index = magnitudes[:, t].argmax()
+        pitch = pitches[index, t]
+        if pitch > 0:  # Only consider positive pitch values
+            pitch_vals.append(pitch)
+
+    return np.mean(pitch_vals) if pitch_vals else 0
+'''
 def get_angle():
     default_angle = 135
     """
@@ -94,8 +113,8 @@ def get_angle():
             pitch = get_pitch(audio_path)
             # Map pitch to angle (from -45° to 90°)
             # Lower frequencies will give negative angles (upward shots)
-            angle_degrees = np.clip(np.interp(pitch, [100, 1000], [180, 90]), 90, 180)
-            print(f"Pitch detected: {pitch} Hz, Angle: {angle_degrees} degrees")
+            angle_degrees = np.clip(np.interp(pitch, [200, 800], [200, 110]), 110, 200)
+            print(f"Pitch detected: {pitch} Hz, Angle: {angle_degrees} degrees, file: {audio_path}")
             return (angle_degrees / 360) * 2 * np.pi
         else:
             print("Audio file not found, using default angle")
@@ -120,8 +139,8 @@ def get_distance():
         if os.path.exists(audio_path):
             T_period = get_duration(audio_path)
             # Map dB to 0-1 range first
-            scaled_factor = T_period /3 # *90 for full range of sling shot
-            distance = 90 * scaled_factor 
+            scaled_factor = T_period / 5  # *90 for full range of sling shot
+            distance = 90 * scaled_factor
             print(f"Time of recording: {T_period}, Power of shot 1-3s is time range: {distance}")
             return distance
         else:

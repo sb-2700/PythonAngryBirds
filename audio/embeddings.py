@@ -1,15 +1,49 @@
-# embeddings.py
+# emb# =============================================================================
+# MODEL SELECTION - CHANGE THIS LINE TO SWITCH MODELS
+# =============================================================================
+USE_MODEL = "PANNS"        # Options: "PANNS", "AST", or "EFFICIENTAT"
+# USE_MODEL = ""          # Audio Spectrogram Transformer
+# USE_MODEL = "EFFICIENTAT"  # EfficientAT-B2 (fast and accurate)
+# =============================================================================s.py
 import numpy as np, soundfile as sf, librosa, torch
 from panns_inference import AudioTagging
+from transformers import AutoFeatureExtractor, AutoModel
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"  # Auto-detect GPU
-_model = None
 
-def _get_model():
-    global _model
-    if _model is None:
-        _model = AudioTagging(checkpoint_path=None, device=DEVICE)  # downloads weights on first use
-    return _model
+# Model variables
+_panns_model = None
+_ast_model = None
+_ast_extractor = None
+_efficientat_model = None
+_efficientat_extractor = None
+
+AST_MODEL_NAME = "MIT/ast-finetuned-audioset-10-10-0.4593"
+# EfficientAT model - using HuBERT for reliable efficient audio processing
+EFFICIENTAT_MODEL_NAME = "facebook/hubert-base-ls960"  # HuBERT efficient audio model
+
+def _get_panns_model():
+    global _panns_model
+    if _panns_model is None:
+        _panns_model = AudioTagging(checkpoint_path=None, device=DEVICE)
+    return _panns_model
+
+def _get_ast_model():
+    global _ast_model, _ast_extractor
+    if _ast_model is None:
+        _ast_extractor = AutoFeatureExtractor.from_pretrained(AST_MODEL_NAME)
+        _ast_model = AutoModel.from_pretrained(AST_MODEL_NAME).to(DEVICE).eval()
+    return _ast_extractor, _ast_model
+
+def _get_efficientat_model():
+    global _efficientat_model, _efficientat_extractor
+    if _efficientat_model is None:
+        # Use HuBERT - efficient, reliable, and great for audio classification
+        print("Loading HuBERT efficient audio model...")
+        _efficientat_extractor = AutoFeatureExtractor.from_pretrained(EFFICIENTAT_MODEL_NAME)
+        _efficientat_model = AutoModel.from_pretrained(EFFICIENTAT_MODEL_NAME).to(DEVICE).eval()
+        print("✓ HuBERT model loaded successfully")
+    return _efficientat_extractor, _efficientat_model
 
 def _rms_db(y):
     """Calculate RMS in dB"""
@@ -60,16 +94,60 @@ def load_mono_16k(path, target_sr=16000, trim_db=30.0, rms_target_db=-20.0, dura
     return y.astype(np.float32)
 
 def wav_to_embedding(path):
-    """Return L2-normalized 2048-D embedding for a wav file."""
+    """Return L2-normalized embedding for a wav file."""
     y = load_mono_16k(path)
-    model = _get_model()
-
-    # Add batch dimension: model expects shape [batch_size, samples]
-    y_batch = y[None, :]  # Convert from [samples] to [1, samples]
-
-    with torch.no_grad():
-        _, emb = model.inference(y_batch)   # emb shape: [T, 2048]
-    v = emb.mean(axis=0)              # temporal average to fixed-size
+    
+    if USE_MODEL == "PANNS":
+        # PANNs model inference
+        model = _get_panns_model()
+        y_batch = y[None, :]  # Add batch dimension for PANNs
+        
+        with torch.no_grad():
+            _, emb = model.inference(y_batch)   # emb shape: [T, 2048]
+        v = emb.mean(axis=0)              # temporal average to fixed-size
+        
+    elif USE_MODEL == "AST":
+        # AST model inference
+        extractor, model = _get_ast_model()
+        inputs = extractor(y, sampling_rate=16000, return_tensors="pt")
+        inputs = {k: v.to(DEVICE) for k, v in inputs.items()}
+        
+        with torch.no_grad():
+            outputs = model(**inputs)
+            embeddings = outputs.last_hidden_state  # [batch, seq_len, hidden_dim]
+            v = embeddings.mean(dim=1).squeeze(0)  # Pool over time, remove batch dim
+        
+        v = v.cpu().numpy()  # Convert to numpy for AST
+    
+    elif USE_MODEL == "EFFICIENTAT":
+        # EfficientAT model inference (using HuBERT)
+        processor, model = _get_efficientat_model()
+        inputs = processor(y, sampling_rate=16000, return_tensors="pt")
+        inputs = {k: v.to(DEVICE) for k, v in inputs.items()}
+        
+        with torch.no_grad():
+            outputs = model(**inputs)
+            # HuBERT outputs last_hidden_state
+            if hasattr(outputs, 'last_hidden_state'):
+                embeddings = outputs.last_hidden_state  # [batch, seq_len, hidden_dim]
+                v = embeddings.mean(dim=1).squeeze(0)  # Pool over time, remove batch dim
+            elif hasattr(outputs, 'extract_features'):
+                # Some HuBERT models have this
+                v = outputs.extract_features.mean(dim=1).squeeze(0)
+            else:
+                # Fallback: use first tensor output
+                v = list(outputs.values())[0]
+                if v.dim() > 1:
+                    v = v.mean(dim=1).squeeze(0)
+                else:
+                    v = v.squeeze(0)
+        
+        v = v.cpu().numpy()  # Convert to numpy for EfficientAT
+    
+    else:
+        raise ValueError(f"Unknown model: {USE_MODEL}")
+    
+    # L2 normalize
     v = v / (np.linalg.norm(v) + 1e-10)
     return v.astype(np.float32)
 

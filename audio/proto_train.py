@@ -2,13 +2,13 @@
 import os, json, numpy as np
 from embeddings import wav_to_embedding
 
-CLASSES = ["red","blue","yellow","white"]
+CLASSES = ["red","blue","yellow"]  # WHITE BIRD DISABLED
 
 FILE_TO_CLASS = {
     "Red_bird_fly.wav": "red",
     "Blue_bird_fly.wav": "blue", 
     "Chuck_yellow_bird_fly.wav": "yellow",
-    "Matilda_white_bird_fly.wav": "white"
+    # "Matilda_white_bird_fly.wav": "white"  # DISABLED WHITE BIRD
 }
 
 def build_prototypes(data_dir="Bird_audios_wav"):

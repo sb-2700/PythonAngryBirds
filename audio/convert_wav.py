@@ -47,8 +47,8 @@ level_json_path = os.path.abspath(level_json_path)  # Convert to absolute path
 
 print("Looking for files in:", dataset_dir)
 
-# Define the bird color folders
-bird_folders = ["blue", "red", "white", "yellow"]
+# Define the bird color folders - WHITE BIRD DISABLED
+bird_folders = ["blue", "red", "yellow"]  # Removed "white"
 
 # Process each bird color folder
 for bird_color in bird_folders:

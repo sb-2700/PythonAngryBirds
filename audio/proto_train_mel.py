@@ -7,8 +7,8 @@ from embeddings import load_mono_16k
 FILE_TO_CLASS = {
     "Red_bird_fly.wav": "red",
     "Blue_bird_fly.wav": "blue",
-    "Chuck_yellow_bird_fly.wav": "yellow",
-    "Matilda_white_bird_fly.wav": "white",
+    "Chuck_yellow_bird_fly.wav": "yellow"
+   # "Matilda_white_bird_fly.wav": "white",
 }
 
 REF_DIR = "Bird_audios_wav"

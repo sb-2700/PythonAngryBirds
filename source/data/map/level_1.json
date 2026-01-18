@@ -1,7 +1,7 @@
 {
     "birds": [
         {
-            "type": "yellow_bird"
+            "type": "red_bird"
         },
         {
             "type": null
